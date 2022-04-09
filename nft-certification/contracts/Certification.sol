@@ -6,55 +6,68 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "hardhat/console.sol";
 
 contract Certification is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
     using Counters for Counters.Counter;
 
     Counters.Counter private _tokenIdCounter;
 
-    mapping(string => uint8) existingURIs;
+    mapping(string => uint256) existingURIs;
 
-    constructor() ERC721("Certification", "CRT") {}
+    constructor() ERC721("Certification", "CRT") {
+        // _tokenIdCounter.increment();
+    }
 
     function _baseURI() internal pure override returns (string memory) {
         return "ipfs://";
     }
 
     function safeMint(address to, string memory uri) public onlyOwner {
-        uint256 tokenId = _tokenIdCounter.current();
+        uint256 mintedTokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
-        _safeMint(to, tokenId);
-        _setTokenURI(tokenId, uri);
+        _safeMint(to, mintedTokenId);
+        _setTokenURI(mintedTokenId, uri);
     }
 
     // The following functions are overrides required by Solidity.
 
-    function tokenURI(uint256 tokenId)
+    function tokenURI(uint256 tokenIdToSearch)
         public
         view
         override(ERC721, ERC721URIStorage)
         returns (string memory)
     {
-        return super.tokenURI(tokenId);
+        return super.tokenURI(tokenIdToSearch);
     }
 
-    function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
-        string memory uri = tokenURI(tokenId);
+    function tokenId(string memory uri)
+        public
+        view
+        returns (uint256)
+    {
+        return existingURIs[uri];
+    }
+
+    function _burn(uint256 tokenIdToBurn) internal override(ERC721, ERC721URIStorage) {
+        string memory uri = tokenURI(tokenIdToBurn);
+        require(existingURIs[uri] != 0, "No Certification with this Id");
+        
         existingURIs[uri] = 0;
-        super._burn(tokenId);
+        _tokenIdCounter.decrement();
+        super._burn(tokenIdToBurn);
     }
 
     function isCertificationOwned(string memory uri) public view returns (bool){
-        return existingURIs[uri] == 1;
+        return existingURIs[uri] != 0;
     }
 
     // Mint an NFT
     function learnToMint(address recipient, string memory uri) public payable returns (uint256) {
-        require(existingURIs[uri] != 1, "Certification already achieved!");
-
-        uint256 newItemId = _tokenIdCounter.current();
+        require(existingURIs[uri] == 0, "Certification already achieved!");
         _tokenIdCounter.increment();
-        existingURIs[uri] = 1;
+        uint256 newItemId = _tokenIdCounter.current();
+        existingURIs[uri] = newItemId;
 
         _mint(recipient, newItemId);
         _setTokenURI(newItemId, uri);
