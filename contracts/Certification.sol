@@ -13,11 +13,9 @@ contract Certification is ERC721, ERC721URIStorage, ERC721Burnable, Ownable {
 
     Counters.Counter private _tokenIdCounter;
 
-    mapping(string => uint256) existingURIs;
+    mapping(string => uint256) private existingURIs;
 
-    constructor() ERC721("Certification", "CRT") {
-        // _tokenIdCounter.increment();
-    }
+    constructor() ERC721("Certification", "CRT"){}
 
     function _baseURI() internal pure override returns (string memory) {
         return "ipfs://";
